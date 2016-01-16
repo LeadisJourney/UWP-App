@@ -38,7 +38,13 @@ module private _Private =
                                                                then Token(TokenType.Keyword, start', end')
                                                                else Token())
 
-  let plexeme = choice [|pidentifierToken|]
+  let pstring = let normalChar = skipMany1Satisfy (fun c' -> c' <> '\\' && c' <> '"')
+                let escapedChar = skipString "\\\""
+                between (skipChar '"') (skipChar '"') (skipMany (normalChar <|> escapedChar))
+
+  let pstringToken = parserToToken pstring (fun _ start' end' -> Token(TokenType.LitString, start', end'))
+
+  let plexeme = choice [|pidentifierToken;pstringToken|]
 
   do _pstart :=  spaces
                  >>. skipMany (plexeme >>. spaces)
