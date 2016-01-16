@@ -21,13 +21,13 @@ module private _Private =
   let pstart, _pstart = createParserForwardedToRef()
 
   let parserToToken parser' ftoken' =
-                pipe3 getPosition
-                      parser'
-                      getPosition
-                      (fun start' res' end' -> let starti = int start'.Index
-                                               let endi = int end'.Index
-                                               ftoken' res' starti endi)
-                >>= fun token -> updateUserState (fun (state':List<Token>) -> state'.Add(token);state')
+    pipe3 getPosition
+          parser'
+          getPosition
+          (fun start' res' end' -> let starti = int start'.Index
+                                   let endi = int end'.Index
+                                   ftoken' res' starti endi)
+    >>= fun token -> updateUserState (fun (state':List<Token>) -> state'.Add(token);state')
 
   let pcomment = let standard = skipString "/*"
                                 >>. skipCharsTillString "*/" true Int32.MaxValue
@@ -35,9 +35,10 @@ module private _Private =
                                 >>. skipRestOfLine true
                  parserToToken (standard <|> oneliner) (fun _ start' end' -> Token(TokenType.Comment, start', end'))
 
-  let spaceToken = spaces1
-                   <|> skipNewline
-                   <|> pcomment
+  let spaces1 = spaces1 <|> pcomment
+  let spaces = optional spaces1
+
+  let ppunct = skipMany1Satisfy (fun c' -> Char.IsPunctuation(c') && c' <> '"')
 
   let pidentifier = let isAsciiIdStart c = isAsciiLetter c || c = '_' in
                     let isAsciiIdContinue c = isAsciiIdStart c || isDigit c in
@@ -47,18 +48,9 @@ module private _Private =
   let pidentifierToken = parserToToken pidentifier
                                        (fun id' start' end' -> if keywords.Contains(id')
                                                                then Token(TokenType.Keyword, start', end')
+                                                               elif String.forall (fun c' -> isUpper c' || c' = '_') id'
+                                                               then Token(TokenType.Macro, start', end')
                                                                else Token())
-
-  let pdirective = skipChar '#'
-                   >>. skipMany spaces1
-                   >>. opt pidentifier
-                   .>> spaces
-                   .>> (skipUnicodeNewline <|> eof)
-
-  let pdirectiveToken = parserToToken pdirective
-                                      (fun id' start' end' -> if id'.IsNone || directives.Contains(id'.Value)
-                                                              then Token(TokenType.Directive, start', end')
-                                                              else Token())
 
   let pnumber = let options = NumberLiteralOptions.AllowFraction
                               ||| NumberLiteralOptions.AllowFractionWOIntegerPart
@@ -71,20 +63,31 @@ module private _Private =
 
   let pnumberToken = parserToToken pnumber (fun _ start' end' -> Token(TokenType.LitNumber, start', end'))
 
-  let plitstring = let normalChar = skipMany1Satisfy (fun c' -> c' <> '\\' && c' <> '"')
+  let plitstring = let normalChar = skipMany1Satisfy (fun c' -> c' <> '\\' && c' <> '"' && c' <> '>')
                    let escapedChar = skipString "\\\""
                    between (skipChar '"') (skipChar '"') (skipMany (normalChar <|> escapedChar))
+                   <|> between (skipChar '<') (skipChar '>') (skipMany (normalChar <|> escapedChar))
 
   let plitstringToken = parserToToken plitstring (fun _ start' end' -> Token(TokenType.LitString, start', end'))
 
-  let plexeme = choice [|spaceToken;
-                         pidentifierToken;
-                         pdirectiveToken;
-                         pnumberToken;
-                         plitstringToken|]
+  let pdirective = attempt (skipChar '#'
+                            >>. spaces
+                            >>. opt pidentifier)
 
-  do _pstart := skipMany plexeme
-                >>. eof
+  let pdirectiveToken = parserToToken pdirective
+                                      (fun id' start' end' -> if id'.IsNone || directives.Contains(id'.Value)
+                                                              then Token(TokenType.Directive, start', end')
+                                                              else Token())
+
+  let plexeme = choice [|pdirectiveToken;
+                         pidentifierToken;
+                         pnumberToken;
+                         plitstringToken;
+                         spaces1;
+                         skipNewline;
+                         ppunct|]
+
+  do _pstart := skipManyTill plexeme eof
 
 open _Private
 
