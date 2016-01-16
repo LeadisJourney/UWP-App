@@ -2,6 +2,7 @@
 
 open FParsec
 open Microsoft.FSharp.Collections
+open System
 open System.Collections.Generic
 
 module private _Private =
@@ -38,6 +39,17 @@ module private _Private =
                                                                then Token(TokenType.Keyword, start', end')
                                                                else Token())
 
+  let pdirective = skipChar '#'
+                   >>. skipMany spaces1
+                   >>. opt pidentifier
+                   .>> spaces
+                   .>> (skipUnicodeNewline <|> eof)
+
+  let pdirectiveToken = parserToToken pdirective
+                                      (fun id' start' end' -> if id'.IsNone || directives.Contains(id'.Value)
+                                                              then Token(TokenType.Directive, start', end')
+                                                              else Token())
+
   let pnumber = let options = NumberLiteralOptions.AllowFraction
                               ||| NumberLiteralOptions.AllowFractionWOIntegerPart
                               ||| NumberLiteralOptions.AllowExponent
@@ -49,17 +61,19 @@ module private _Private =
 
   let pnumberToken = parserToToken pnumber (fun _ start' end' -> Token(TokenType.LitNumber, start', end'))
 
-  let pstring = let normalChar = skipMany1Satisfy (fun c' -> c' <> '\\' && c' <> '"')
-                let escapedChar = skipString "\\\""
-                between (skipChar '"') (skipChar '"') (skipMany (normalChar <|> escapedChar))
+  let plitstring = let normalChar = skipMany1Satisfy (fun c' -> c' <> '\\' && c' <> '"')
+                   let escapedChar = skipString "\\\""
+                   between (skipChar '"') (skipChar '"') (skipMany (normalChar <|> escapedChar))
 
-  let pstringToken = parserToToken pstring (fun _ start' end' -> Token(TokenType.LitString, start', end'))
+  let plitstringToken = parserToToken plitstring (fun _ start' end' -> Token(TokenType.LitString, start', end'))
 
-  let plexeme = choice [|pidentifierToken;pnumberToken;pstringToken|]
+  let plexeme = choice [|pidentifierToken;
+                         pdirectiveToken;
+                         pnumberToken;
+                         plitstringToken|]
 
   do _pstart :=  spaces
                  >>. skipMany (plexeme >>. spaces)
-                 >>. eof
 
 open _Private
 
