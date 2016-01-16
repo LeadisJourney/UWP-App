@@ -13,6 +13,7 @@ namespace Leadis_Journey
         readonly Color colorBackground = Color.FromArgb(0xFF, 0x1E, 0x1E, 0x1E);
         readonly Color colorText = Color.FromArgb(0xFF, 0xDC, 0xDC, 0xDC);
         readonly Color colorKeyword = Color.FromArgb(0xFF, 0x56, 0x9c, 0xD6);
+        readonly Color colorLitNumber = Color.FromArgb(0xFF, 0xB5, 0xCE, 0xA8);
         readonly Color colorLitString = Color.FromArgb(0xFF, 0xD6, 0x9D, 0x85);
 
         private RichEditBox xEditBox;
@@ -63,6 +64,9 @@ namespace Leadis_Journey
                 {
                     case TokenType.Keyword:
                         range.CharacterFormat.ForegroundColor = colorKeyword;
+                        break;
+                    case TokenType.LitNumber:
+                        range.CharacterFormat.ForegroundColor = colorLitNumber;
                         break;
                     case TokenType.LitString:
                         range.CharacterFormat.ForegroundColor = colorLitString;

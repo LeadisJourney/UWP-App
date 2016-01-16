@@ -1,10 +1,11 @@
 ﻿namespace Leadis_Journey
 
 type TokenType =
-  | None      = 0b00000000
-  | Keyword   = 0b00000001
-  | Directive = 0b00000010
-  | LitString = 0b00000011
+  | None      = 0
+  | Keyword   = 1
+  | Directive = 2
+  | LitNumber = 3
+  | LitString = 4
 
 type Token =
   struct

@@ -38,13 +38,24 @@ module private _Private =
                                                                then Token(TokenType.Keyword, start', end')
                                                                else Token())
 
+  let pnumber = let options = NumberLiteralOptions.AllowFraction
+                              ||| NumberLiteralOptions.AllowFractionWOIntegerPart
+                              ||| NumberLiteralOptions.AllowExponent
+                              ||| NumberLiteralOptions.AllowHexadecimal
+                              ||| NumberLiteralOptions.AllowExponent
+                              ||| NumberLiteralOptions.AllowMinusSign
+                              ||| NumberLiteralOptions.AllowPlusSign in
+                numberLiteralE options (otherError null)
+
+  let pnumberToken = parserToToken pnumber (fun _ start' end' -> Token(TokenType.LitNumber, start', end'))
+
   let pstring = let normalChar = skipMany1Satisfy (fun c' -> c' <> '\\' && c' <> '"')
                 let escapedChar = skipString "\\\""
                 between (skipChar '"') (skipChar '"') (skipMany (normalChar <|> escapedChar))
 
   let pstringToken = parserToToken pstring (fun _ start' end' -> Token(TokenType.LitString, start', end'))
 
-  let plexeme = choice [|pidentifierToken;pstringToken|]
+  let plexeme = choice [|pidentifierToken;pnumberToken;pstringToken|]
 
   do _pstart :=  spaces
                  >>. skipMany (plexeme >>. spaces)
