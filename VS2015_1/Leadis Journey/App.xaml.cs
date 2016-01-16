@@ -7,6 +7,8 @@ using Windows.ApplicationModel;
 using Windows.ApplicationModel.Activation;
 using Windows.Foundation;
 using Windows.Foundation.Collections;
+using Windows.UI;
+using Windows.UI.ViewManagement;
 using Windows.UI.Xaml;
 using Windows.UI.Xaml.Controls;
 using Windows.UI.Xaml.Controls.Primitives;
@@ -46,7 +48,7 @@ namespace Leadis_Journey
 #if DEBUG
             if (System.Diagnostics.Debugger.IsAttached)
             {
-                this.DebugSettings.EnableFrameRateCounter = true;
+                //this.DebugSettings.EnableFrameRateCounter = true;
             }
 #endif
 
@@ -75,10 +77,17 @@ namespace Leadis_Journey
                 // Quand la pile de navigation n'est pas restaurée, accédez à la première page,
                 // puis configurez la nouvelle page en transmettant les informations requises en tant que
                 // paramètre
-                rootFrame.Navigate(typeof(MainPage), e.Arguments);
+                rootFrame.Navigate(typeof(IDE), e.Arguments);
             }
             // Vérifiez que la fenêtre actuelle est active
             Window.Current.Activate();
+            if (Windows.Foundation.Metadata.ApiInformation.IsTypePresent("Windows.UI.ViewManagement.ApplicationView"))
+            {
+                var titleBar = ApplicationView.GetForCurrentView().TitleBar;
+                titleBar.ButtonBackgroundColor = Colors.Black;
+                titleBar.BackgroundColor = Colors.Black;
+                titleBar.ForegroundColor = Colors.White;
+            }
         }
 
         /// <summary>
