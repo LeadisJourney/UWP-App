@@ -16,6 +16,7 @@ namespace Leadis_Journey
         readonly Color colorDirective = Color.FromArgb(0xFF, 0x9B, 0x9B, 0x9B);
         readonly Color colorLitNumber = Color.FromArgb(0xFF, 0xB5, 0xCE, 0xA8);
         readonly Color colorLitString = Color.FromArgb(0xFF, 0xD6, 0x9D, 0x85);
+        readonly Color colorComment = Color.FromArgb(0xFF, 0x57, 0xA6, 0x4A);
 
         private RichEditBox xEditBox;
         private CParser cParser = new CParser();
@@ -74,6 +75,9 @@ namespace Leadis_Journey
                         break;
                     case TokenType.LitString:
                         range.CharacterFormat.ForegroundColor = colorLitString;
+                        break;
+                    case TokenType.Comment:
+                        range.CharacterFormat.ForegroundColor = colorComment;
                         break;
                     default:
                         break;

@@ -29,6 +29,16 @@ module private _Private =
                                                ftoken' res' starti endi)
                 >>= fun token -> updateUserState (fun (state':List<Token>) -> state'.Add(token);state')
 
+  let pcomment = let standard = skipString "/*"
+                                >>. skipCharsTillString "*/" true Int32.MaxValue
+                 let oneliner = skipString "//"
+                                >>. skipRestOfLine true
+                 parserToToken (standard <|> oneliner) (fun _ start' end' -> Token(TokenType.Comment, start', end'))
+
+  let spaceToken = spaces1
+                   <|> skipNewline
+                   <|> pcomment
+
   let pidentifier = let isAsciiIdStart c = isAsciiLetter c || c = '_' in
                     let isAsciiIdContinue c = isAsciiIdStart c || isDigit c in
                     identifier (IdentifierOptions(isAsciiIdStart=isAsciiIdStart,
@@ -67,13 +77,14 @@ module private _Private =
 
   let plitstringToken = parserToToken plitstring (fun _ start' end' -> Token(TokenType.LitString, start', end'))
 
-  let plexeme = choice [|pidentifierToken;
+  let plexeme = choice [|spaceToken;
+                         pidentifierToken;
                          pdirectiveToken;
                          pnumberToken;
                          plitstringToken|]
 
-  do _pstart :=  spaces
-                 >>. skipMany (plexeme >>. spaces)
+  do _pstart := skipMany plexeme
+                >>. eof
 
 open _Private
 

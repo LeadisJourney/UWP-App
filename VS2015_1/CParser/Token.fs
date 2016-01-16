@@ -6,6 +6,7 @@ type TokenType =
   | Directive = 2
   | LitNumber = 3
   | LitString = 4
+  | Comment   = 10
 
 type Token =
   struct
