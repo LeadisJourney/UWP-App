@@ -5,7 +5,7 @@ VisualStudioVersion = 14.0.24720.0
 MinimumVisualStudioVersion = 10.0.40219.1
 Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Leadis Journey", "Leadis Journey\Leadis Journey.csproj", "{439BD6C0-5DF2-43CA-91CD-3FF025176252}"
 EndProject
-Project("{8BC9CEB8-8B4A-11D0-8D11-00A0C91BC942}") = "Cparser", "Cparser\Cparser.vcxproj", "{5ECAB74C-A846-47E3-A2DC-DA0AA9A0802F}"
+Project("{8BC9CEB8-8B4A-11D0-8D11-00A0C91BC942}") = "CodeParser", "CodeParser\CodeParser.vcxproj", "{5ECAB74C-A846-47E3-A2DC-DA0AA9A0802F}"
 EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution

@@ -29,8 +29,8 @@
   <PropertyGroup Label="Globals">
     <ProjectGuid>{5ecab74c-a846-47e3-a2dc-da0aa9a0802f}</ProjectGuid>
     <Keyword>WindowsRuntimeComponent</Keyword>
-    <ProjectName>Cparser</ProjectName>
-    <RootNamespace>Cparser</RootNamespace>
+    <ProjectName>CodeParser</ProjectName>
+    <RootNamespace>CodeParser</RootNamespace>
     <DefaultLanguage>fr-FR</DefaultLanguage>
     <MinimumVisualStudioVersion>14.0</MinimumVisualStudioVersion>
     <AppContainerApplication>true</AppContainerApplication>
@@ -211,7 +211,7 @@
   </ItemDefinitionGroup>
   <ItemGroup>
     <ClInclude Include="pch.h" />
-    <ClInclude Include="Cparser.h" />
+    <ClInclude Include="CodeParser.h" />
   </ItemGroup>
   <ItemGroup>
     <ClCompile Include="pch.cpp">
@@ -222,7 +222,7 @@
       <PrecompiledHeader Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">Create</PrecompiledHeader>
       <PrecompiledHeader Condition="'$(Configuration)|$(Platform)'=='Release|x64'">Create</PrecompiledHeader>
     </ClCompile>
-    <ClCompile Include="Cparser.cpp" />
+    <ClCompile Include="CodeParser.cpp" />
   </ItemGroup>
   <Import Project="$(VCTargetsPath)\Microsoft.Cpp.targets" />
   <ImportGroup Label="ExtensionTargets">

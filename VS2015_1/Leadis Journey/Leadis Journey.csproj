@@ -145,9 +145,9 @@
     </Page>
   </ItemGroup>
   <ItemGroup>
-    <ProjectReference Include="..\Cparser\Cparser.vcxproj">
+    <ProjectReference Include="..\CodeParser\CodeParser.vcxproj">
       <Project>{5ecab74c-a846-47e3-a2dc-da0aa9a0802f}</Project>
-      <Name>Cparser</Name>
+      <Name>CodeParser</Name>
     </ProjectReference>
   </ItemGroup>
   <PropertyGroup Condition=" '$(VisualStudioVersion)' == '' or '$(VisualStudioVersion)' &lt; '14.0' ">

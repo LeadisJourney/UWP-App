@@ -8,10 +8,10 @@
   </ItemGroup>
   <ItemGroup>
     <ClCompile Include="pch.cpp" />
-    <ClCompile Include="Cparser.cpp" />
+    <ClCompile Include="CodeParser.cpp" />
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="pch.h" />
-    <ClInclude Include="Cparser.h" />
+    <ClInclude Include="CodeParser.h" />
   </ItemGroup>
 </Project>
