@@ -6,9 +6,10 @@
         <Setter Property="Template">
             <Setter.Value>
                 <ControlTemplate TargetType="local:EditableSourceCode">
-                    <Grid
-                        Background="{TemplateBinding Background}">
-                        <RichEditBox x:Name="xEditBox">
+                    <Grid Background="{TemplateBinding Background}">
+                        <RichEditBox
+                            x:Name="xEditBox"
+                            Grid.Column="1">
                             <RichEditBox.Resources>
                                 <Style x:Key="RichEditBoxStyle1"
                                        TargetType="RichEditBox">

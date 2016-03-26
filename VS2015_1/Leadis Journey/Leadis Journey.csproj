@@ -31,6 +31,7 @@
     <UseVSHostingProcess>false</UseVSHostingProcess>
     <ErrorReport>prompt</ErrorReport>
     <Prefer32Bit>true</Prefer32Bit>
+    <TreatWarningsAsErrors>true</TreatWarningsAsErrors>
   </PropertyGroup>
   <PropertyGroup Condition="'$(Configuration)|$(Platform)' == 'Release|x86'">
     <OutputPath>bin\x86\Release\</OutputPath>
@@ -101,7 +102,8 @@
     <Compile Include="App.xaml.cs">
       <DependentUpon>App.xaml</DependentUpon>
     </Compile>
-    <Compile Include="EditableSourceCode.cs" />
+    <Compile Include="EditableSourceCode\EditableSourceCode.cs" />
+    <Compile Include="EditableSourceCode\StateString.cs" />
     <Compile Include="IDE.xaml.cs">
       <DependentUpon>IDE.xaml</DependentUpon>
     </Compile>
@@ -143,12 +145,6 @@
       <Generator>MSBuild:Compile</Generator>
       <SubType>Designer</SubType>
     </Page>
-  </ItemGroup>
-  <ItemGroup>
-    <ProjectReference Include="..\CodeParser\CodeParser.vcxproj">
-      <Project>{5ecab74c-a846-47e3-a2dc-da0aa9a0802f}</Project>
-      <Name>CodeParser</Name>
-    </ProjectReference>
   </ItemGroup>
   <PropertyGroup Condition=" '$(VisualStudioVersion)' == '' or '$(VisualStudioVersion)' &lt; '14.0' ">
     <VisualStudioVersion>14.0</VisualStudioVersion>

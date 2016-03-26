@@ -6,9 +6,7 @@
       xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
       mc:Ignorable="d">
 
-    <Grid Background="{ThemeResource ApplicationPageBackgroundThemeBrush}">
-        <local:EditableSourceCode
-            
-            FontFamily="Consolas" />
+    <Grid>
+        <local:EditableSourceCode />
     </Grid>
 </Page>
