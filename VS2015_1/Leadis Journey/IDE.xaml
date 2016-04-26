@@ -4,9 +4,23 @@
       xmlns:local="using:Leadis_Journey"
       xmlns:d="http://schemas.microsoft.com/expression/blend/2008"
       xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
-      mc:Ignorable="d">
-
+      mc:Ignorable="d"
+      RequestedTheme="Dark"
+      >
     <Grid>
-        <local:EditableSourceCode />
+        <Grid.RowDefinitions>
+            <RowDefinition Height="48" />
+            <RowDefinition Height="*" />
+        </Grid.RowDefinitions>
+        <StackPanel Grid.Row="0"
+                    Background="Black"
+                    Orientation="Horizontal"
+                    Padding="6"
+                    >
+            <TextBlock x:Name="test1btn" Margin="6">Test 1</TextBlock>
+            <TextBlock x:Name="test2btn" Margin="6">Test 2</TextBlock>
+        </StackPanel>
+        <local:EditableSourceCode x:Name="test1" Grid.Row="1" />
+        <local:EditableSourceCode x:Name="test2" Grid.Row="1" />
     </Grid>
 </Page>

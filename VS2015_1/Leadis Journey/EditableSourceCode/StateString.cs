@@ -4,12 +4,8 @@ using System.Collections.Generic;
 
 namespace Leadis_Journey
 {
-    public class StateString<T>
-        : IComparable
-        , IComparable<string>
-        , IEnumerable<char>
-        , IEquatable<string>
-        where T : new()
+    public class StateString<T, DefaultCtor>
+        where DefaultCtor : T, new()
     {
         private string text;
         private List<T> states;
@@ -23,7 +19,7 @@ namespace Leadis_Journey
         static private IEnumerable<T> InitStates(int n)
         {
             while (--n >= 0)
-                yield return new T();
+                yield return new DefaultCtor();
             yield break;
         }
 
@@ -62,32 +58,5 @@ namespace Leadis_Journey
                 return this.text.Length;
             }
         }
-
-        #region Interfaces implementation
-        public int CompareTo(string other)
-        {
-            return text.CompareTo(other);
-        }
-
-        public bool Equals(string other)
-        {
-            return text.Equals(other);
-        }
-
-        public IEnumerator<char> GetEnumerator()
-        {
-            return (text as IEnumerable<char>).GetEnumerator();
-        }
-
-        IEnumerator IEnumerable.GetEnumerator()
-        {
-            return (text as IEnumerable<char>).GetEnumerator();
-        }
-
-        public int CompareTo(object obj)
-        {
-            return (text as IComparable).CompareTo(obj);
-        }
-        #endregion
     }
 }

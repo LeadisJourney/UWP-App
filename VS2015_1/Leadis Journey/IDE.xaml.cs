@@ -25,6 +25,21 @@ namespace Leadis_Journey
         public IDE()
         {
             this.InitializeComponent();
+            this.test2.Visibility = Visibility.Collapsed;
+            this.test1btn.Tapped += Test1btn_Tapped;
+            this.test2btn.Tapped += Test2btn_Tapped;
+        }
+
+        private void Test1btn_Tapped(object sender, TappedRoutedEventArgs e)
+        {
+            this.test2.Visibility = Visibility.Collapsed;
+            this.test1.Visibility = Visibility.Visible;
+        }
+
+        private void Test2btn_Tapped(object sender, TappedRoutedEventArgs e)
+        {
+            this.test1.Visibility = Visibility.Collapsed;
+            this.test2.Visibility = Visibility.Visible;
         }
     }
 }
