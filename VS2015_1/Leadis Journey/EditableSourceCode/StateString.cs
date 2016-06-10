@@ -35,6 +35,12 @@ namespace Leadis_Journey
             this.states.RemoveRange(where, count);
         }
 
+        public void Set(string text)
+        {
+            this.text = text;
+            this.states = new List<T>(InitStates(text.Length));
+        }
+
         public string Chars
         {
             get

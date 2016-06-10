@@ -103,7 +103,7 @@
       <DependentUpon>App.xaml</DependentUpon>
     </Compile>
     <Compile Include="C99Highlighter\C99Highlighter.cs" />
-    <Compile Include="C99Highlighter\IToken.cs" />
+    <Compile Include="C99Highlighter\Pstate.cs" />
     <Compile Include="EditableSourceCode\EditableSourceCode.cs" />
     <Compile Include="EditableSourceCode\IHighlighter.cs" />
     <Compile Include="EditableSourceCode\StateString.cs" />

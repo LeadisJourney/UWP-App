@@ -27,6 +27,7 @@ namespace Leadis_Journey
 
         private IHighlighter highlighter;
         private RichEditBox xEditBox;
+        private int oldlen;
 
         public EditableSourceCode()
         {
@@ -35,6 +36,7 @@ namespace Leadis_Journey
             this.ApplyTemplate();
             this.Background = new SolidColorBrush(colorBackground);
             this.Unloaded += EditableSourceCode_Unloaded;
+            this.oldlen = 0;
         }
 
         private void EditableSourceCode_Unloaded(object sender, Windows.UI.Xaml.RoutedEventArgs e)
@@ -57,26 +59,33 @@ namespace Leadis_Journey
             this.xEditBox.Foreground = new SolidColorBrush(colorText);
             this.xEditBox.Loaded += (a, b) =>
             {
-                this.xEditBox.KeyDown += XEditBox_KeyDown;
                 this.xEditBox.KeyUp += XEditBox_KeyUp;
                 this.xEditBox.TextChanging += XEditBox_TextChanging;
             };
         }
 
-        private void XEditBox_KeyDown(object sender, KeyRoutedEventArgs e)
-        {
-            if (e.Key == Windows.System.VirtualKey.Tab)
-            {
-                this.xEditBox.Document.Selection.TypeText("  ");
-                e.Handled = true;
-            }
-        }
-
         private void XEditBox_KeyUp(object sender, KeyRoutedEventArgs e)
         {
+            var doc = this.xEditBox.Document;
             string text;
-            this.xEditBox.Document.GetText(TextGetOptions.None, out text);
-            this.highlighter.SetText(text);
+            doc.GetText(TextGetOptions.UseCrlf, out text);
+            if (text.Length == oldlen)
+                return;
+            if (text.Length < 16)
+                this.highlighter.SetText(text);
+            else if (text.Length > oldlen)
+            {
+                var diff = text.Length - this.oldlen;
+                var pos = doc.Selection.StartPosition - diff;
+                this.highlighter.InsertText(pos, text.Substring(pos, diff));
+            }
+            else
+            {
+                var diff = this.oldlen - text.Length;
+                var pos = doc.Selection.StartPosition;
+                this.highlighter.RemoveText(pos, diff);
+            }
+            this.oldlen = text.Length;
         }
 
         async private Task RetrieveAndColourTokensWithDelay()

@@ -8,7 +8,7 @@ using System.Threading.Tasks;
 
 namespace Leadis_Journey
 {
-    public sealed partial class C99Highlighter : IHighlighter
+    public partial class C99Highlighter : IHighlighter
     {
         private struct TextBlock
         {
@@ -49,385 +49,197 @@ namespace Leadis_Journey
         private sealed class ParserTask : IDisposable
         {
             private const int WAIT_FOR_BLOCK = 100;
-            private static readonly HashSet<string> KEYWORDS = new HashSet<string>()
+            private static readonly Dictionary<string, Ltype> KEYWORDS = new Dictionary<string, Ltype>()
+            #region Dictionary initialisation
             {
-                "auto",         "break",        "case",         "char",         "const",        "continue",
-                "default",      "do",           "double",       "else",         "enum",         "extern",
-                "float",        "for",          "goto",         "if",           "int",          "long",
-                "register",     "return",       "short",        "signed",       "sizeof",       "static",
-                "struct",       "switch",       "typedef",      "union",        "unsigned",     "void",
-                "volatile",     "while",        "_Bool",        "_Complex",     "_Imaginary",   "inline",
-                "restrict",
+                { "auto",       Ltype.KwAuto },
+                { "break",      Ltype.KwBreak },
+                { "case",       Ltype.KwCase },
+                { "char",       Ltype.KwChar },
+                { "const",      Ltype.KwConst },
+                { "continue",   Ltype.KwContinue },
+                { "default",    Ltype.KwDefault },
+                { "do",         Ltype.KwDo },
+                { "double",     Ltype.KwDouble },
+                { "else",       Ltype.KwElse },
+                { "enum",       Ltype.KwEnum },
+                { "extern",     Ltype.KwExtern },
+                { "float",      Ltype.KwFloat },
+                { "for",        Ltype.KwFor },
+                { "goto",       Ltype.KwGoto },
+                { "if",         Ltype.KwIf },
+                { "int",        Ltype.KwInt },
+                { "long",       Ltype.KwLong },
+                { "register",   Ltype.KwRegister },
+                { "return",     Ltype.KwReturn },
+                { "short",      Ltype.KwShort },
+                { "signed",     Ltype.KwSigned },
+                { "sizeof",     Ltype.KwSizeof },
+                { "static",     Ltype.KwStatic },
+                { "struct",     Ltype.KwStruct },
+                { "switch",     Ltype.KwSwitch },
+                { "typedef",    Ltype.KwTypedef },
+                { "union",      Ltype.KwUnion },
+                { "unsigned",   Ltype.KwUnsigned },
+                { "void",       Ltype.KwVoid },
+                { "volatile",   Ltype.KwVolatile },
+                { "while",      Ltype.KwWhile },
+                { "_Bool",      Ltype.KwBool },
+                { "_Complex",   Ltype.KwComplex },
+                { "_Imaginary", Ltype.KwImaginary },
+                { "inline",     Ltype.KwInline },
+                { "restrict",   Ltype.KwRestrict },
             };
-            private HashSet<string> macros;
+            #endregion
             private ConcurrentQueue<TextBlock> inqueue;
             private ConcurrentQueue<Token> outqueue;
             private CancellationTokenSource taskToken;
             private Task task;
-            private StateString<IToken, NoneToken> text;
+            private Stack<ITk> tokens;
+            private LinkedList<Token> idsHg;
+            private LinkedList<Token> keywordsHg;
+            private StateString<ITk, NoneTk> text;
 
             public Action Start;
 
             public ParserTask(ConcurrentQueue<TextBlock> inqueue, ConcurrentQueue<Token> outqueue)
             {
-                this.macros = new HashSet<string>();
                 this.inqueue = inqueue;
                 this.outqueue = outqueue;
                 this.taskToken = new CancellationTokenSource();
                 this.task = new Task(this.Loop, this.taskToken.Token);
-                this.text = new StateString<IToken, NoneToken>();
+                this.tokens = new Stack<ITk>();
+                this.idsHg = new LinkedList<Token>();
+                this.keywordsHg = new LinkedList<Token>();
+                this.text = new StateString<ITk, NoneTk>();
                 this.Start = task.Start;
             }
 
-            private void Emit(int begin, int end, TokenType type)
+            private Lexeme Lex(ref int idx)
             {
-                this.outqueue.Enqueue(new Token(begin, end, type));
+                int begin;
+                char cchar;
+                string str;
+
+            start:
+                if (idx >= this.text.Chars.Length)
+                    goto eof;
+                switch (this.text.Chars[idx])
+                {
+                case ' ':
+                    ++idx;
+                    goto start;
+                case '\t':
+                    ++idx;
+                    goto start;
+                case '\r':
+                    ++idx;
+                    goto start;
+                case '{':
+                    ++idx;
+                    return new Lexeme(Ltype.Lacc, null);
+                case '}':
+                    ++idx;
+                    return new Lexeme(Ltype.Racc, null);
+                case ';':
+                    ++idx;
+                    return new Lexeme(Ltype.Semic, null);
+                default:
+                    cchar = this.text.Chars[idx];
+                    if (Char.IsLetter(cchar) || cchar == '_' || cchar == '$')
+                        goto identifier;
+                    ++idx;
+                    return new Lexeme(Ltype.Unknown, this.text.Chars[idx - 1].ToString());
+                }
+
+            identifier:
+                begin = idx;
+                ++idx;
+                while (idx < this.text.Chars.Length)
+                {
+                    cchar = this.text.Chars[idx];
+                    if (Char.IsLetterOrDigit(cchar) || cchar == '_' || cchar == '$')
+                        ++idx;
+                    else
+                        break;
+                }
+                str = this.text.Chars.Substring(begin, idx - begin);
+                if (KEYWORDS.ContainsKey(str))
+                {
+                    this.keywordsHg.AddLast(new Token(begin, idx, TokenType.Keyword));
+                    return new Lexeme(KEYWORDS[str], str);
+                }
+                return new Lexeme(Ltype.Identifier, str);
+
+            eof:
+                return new Lexeme(Ltype.Eof, null);
             }
 
             private void Parse(int idx = 0)
             {
-                if (this.text.Length <= 0)
-                    return;
-                Pstate cstate = this.text.States[idx].State;
-                --idx;
-                string id = null;
-                char cchar;
-                int start = 0;
-                goto jumptable;
-
-            jumptable:
-                switch (cstate)
-                {
-                case Pstate.None: goto none;
-                case Pstate.NoneNoPP: goto noneNoPP;
-                case Pstate.JumpToDefineAE: goto ppDefineAfterIdentifier;
-                case Pstate.JumpToUndefAE: goto ppUndefAfterIdentifier;
-                }
+                this.tokens.Clear();
+                Lexeme lexeme;
+                idx = 0;
+                goto none;
 
             none:
-                if (++idx >= this.text.Length)
-                    return;
-                cchar = this.text.Chars[idx];
-                if (Char.IsWhiteSpace(cchar))
-                    goto none;
-                if (cchar == '#')
-                    goto ppStart;
-                --idx;
-                goto noneNoPP;
-
-            noneNoPP:
-                if (++idx >= this.text.Length)
-                    return;
-                cchar = this.text.Chars[idx];
-                if (cchar == '\r')
-                    goto none;
-                if (cchar == '\'')
-                    goto litCharStart;
-                if (cchar == '"')
-                    goto litStringStart;
-                if (Char.IsDigit(cchar))
-                    goto litNumberStart;
-                if (Char.IsWhiteSpace(cchar))
-                    goto noneNoPP;
-                if (Char.IsLetter(cchar) || cchar == '_' || cchar == '$')
-                    goto identifierStart;
-                goto noneNoPP;
-
-            #region Directives parsing
-            ppStart:
-                start = idx;
-                goto ppCont;
-
-            ppCont:
-                if (++idx >= this.text.Length)
-                    return;
-                cchar = this.text.Chars[idx];
-                if (cchar == '\r')
-                    goto none;
-                if (Char.IsWhiteSpace(cchar))
-                    goto ppCont;
-                if ((idx + 6 < this.text.Chars.Length) && (this.text.Chars.Substring(idx, 6) == "define"))
+                lexeme = this.Lex(ref idx);
+                switch (lexeme.Type)
                 {
-                    idx += 6;
-                    goto ppDefineStart;
-                }
-                if ((idx + 5 < this.text.Chars.Length) && (this.text.Chars.Substring(idx, 5) == "undef"))
-                {
-                    idx += 5;
-                    goto ppUndefStart;
-                }
-                goto ppStart;
-
-            #region Define parsing
-            ppDefineStart:
-                this.Emit(start, idx, TokenType.Directive);
-                goto ppDefineBeforeIdentifier;
-
-            ppDefineBeforeIdentifier:
-                if (++idx >= this.text.Length)
-                    return;
-                cchar = this.text.Chars[idx];
-                if (cchar == '\r')
-                    goto none;
-                if (Char.IsWhiteSpace(cchar))
-                    goto ppDefineBeforeIdentifier;
-                cstate = Pstate.JumpToDefineAE;
-                goto identifierStart;
-
-            ppDefineAfterIdentifier:
-                cstate = Pstate.None;
-                this.Emit(start, idx + 1, TokenType.Macro);
-                this.macros.Add(id);
-                --idx;
-                goto noneNoPP;
-            #endregion
-
-            #region Undef parsing
-            ppUndefStart:
-                this.Emit(start, idx, TokenType.Directive);
-                goto ppUndefBeforeIdentifier;
-
-            ppUndefBeforeIdentifier:
-                if (++idx >= this.text.Length)
-                    return;
-                cchar = this.text.Chars[idx];
-                if (cchar == '\r')
-                    goto none;
-                if (Char.IsWhiteSpace(cchar))
-                    goto ppUndefBeforeIdentifier;
-                cstate = Pstate.JumpToUndefAE;
-                goto identifierStart;
-
-            ppUndefAfterIdentifier:
-                cstate = Pstate.None;
-                this.Emit(start, idx + 1, TokenType.Macro);
-                this.macros.Remove(id);
-                --idx;
-                goto noneNoPP;
-            #endregion
-            #endregion
-
-            #region Char parsing
-            litCharStart:
-                start = idx;
-                goto litCharCont;
-
-            litCharCont:
-                if (++idx >= this.text.Length)
-                    return;
-                cchar = this.text.Chars[idx];
-                if (cchar == '\'')
-                {
-                    this.Emit(start, idx + 1, TokenType.Error);
-                    goto noneNoPP;
-                }
-                if (cchar == '\\')
-                    goto litCharEscaped;
-                goto litCharEnd;
-
-            litCharEscaped:
-                if (++idx >= this.text.Length)
-                    return;
-                switch (this.text.Chars[idx])
-                {
-                case 'a': goto litCharEnd;
-                case 'b': goto litCharEnd;
-                case 'f': goto litCharEnd;
-                case 'n': goto litCharEnd;
-                case 'r': goto litCharEnd;
-                case 't': goto litCharEnd;
-                case 'v': goto litCharEnd;
-                case '\\': goto litCharEnd;
-                case '\'': goto litCharEnd;
-                case '\r': goto litCharEnd;
-                case '"': goto litCharEnd;
-                case '?': goto litCharEnd;
-                case 'x': goto litCharEscapedXStart;
-                case '0': goto litCharEscapedO;
-                case '1': goto litCharEscapedO;
-                case '2': goto litCharEscapedO;
-                case '3': goto litCharEscapedO;
-                case '4': goto litCharEscapedO;
-                case '5': goto litCharEscapedO;
-                case '6': goto litCharEscapedO;
-                case '7': goto litCharEscapedO;
-                case '8': goto litCharEscapedO;
-                case '9': goto litCharEscapedO;
+                case Ltype.Identifier:
+                    goto identifier;
+                case Ltype.KwEnum:
+                    goto enumBegin;
                 default:
-                    this.Emit(start, idx - 1, TokenType.LitChar);
-                    this.Emit(idx - 1, idx + 1, TokenType.Error);
-                    start = idx + 1;
-                    goto litCharEnd;
+                    goto backToSafety;
                 }
 
-            litCharEscapedXStart:
-                if (++idx >= this.text.Length)
-                    return;
-                cchar = this.text.Chars[idx];
-                if (Char.IsDigit(cchar) || (cchar >= 'A' && cchar <= 'F') || (cchar >= 'a' && cchar <= 'f'))
-                    goto litCharEscapedXCont;
-                this.Emit(start, idx - 1, TokenType.LitChar);
-                this.Emit(idx - 1, idx + 1, TokenType.Error);
-                start = idx + 1;
-                goto litCharEnd;
+            identifier:
 
-            litCharEscapedXCont:
-                if (++idx >= this.text.Length)
-                    return;
-                cchar = this.text.Chars[idx];
-                if (Char.IsDigit(cchar) || (cchar >= 'A' && cchar <= 'F') || (cchar >= 'a' && cchar <= 'f'))
-                    goto litCharEscapedXCont;
-                --idx;
-                goto litCharEnd;
+                goto none;
 
-            litCharEscapedO:
-                goto litCharEnd;
-
-            litCharEnd:
-                if (++idx >= this.text.Length)
-                    return;
-                cchar = this.text.Chars[idx];
-                if (cchar == '\'')
-                    this.Emit(start, idx + 1, TokenType.LitChar);
-                else
-                    this.Emit(start, idx + 1, TokenType.Error);
-                goto noneNoPP;
-            #endregion Char parsing
-
-            #region String parsing
-            litStringStart:
-                start = idx + 1;
-                this.Emit(idx, start, TokenType.LitString);
-                goto litStringCont;
-
-            litStringCont:
-                if (++idx >= this.text.Length)
-                    return;
-                cchar = this.text.Chars[idx];
-                if (cchar == '"')
+            enumBegin:
+                lexeme = this.Lex(ref idx);
+                switch (lexeme.Type)
                 {
-                    this.Emit(start, idx + 1, TokenType.LitString);
-                    goto noneNoPP;
-                }
-                if (cchar == '\r')
-                {
-                    this.Emit(start, idx - 1, TokenType.LitString);
-                    this.Emit(idx - 1, idx, TokenType.Error);
-                    goto none;
-                }
-                if (cchar == '\\')
-                    goto litStringEscaped;
-                goto litStringCont;
-
-            litStringEscaped:
-                if (++idx >= this.text.Length)
-                    return;
-                switch (this.text.Chars[idx])
-                {
-                case 'a': goto litStringCont;
-                case 'b': goto litStringCont;
-                case 'f': goto litStringCont;
-                case 'n': goto litStringCont;
-                case 'r': goto litStringCont;
-                case 't': goto litStringCont;
-                case 'v': goto litStringCont;
-                case '\\': goto litStringCont;
-                case '\'': goto litStringCont;
-                case '\r': goto litStringCont;
-                case '"': goto litStringCont;
-                case '?': goto litStringCont;
-                case 'x': goto litStringEscapedXStart;
-                case '0': goto litStringEscapedO;
-                case '1': goto litStringEscapedO;
-                case '2': goto litStringEscapedO;
-                case '3': goto litStringEscapedO;
-                case '4': goto litStringEscapedO;
-                case '5': goto litStringEscapedO;
-                case '6': goto litStringEscapedO;
-                case '7': goto litStringEscapedO;
-                case '8': goto litStringEscapedO;
-                case '9': goto litStringEscapedO;
+                case Ltype.Identifier:
+                    this.tokens.Push(new EnumTk(lexeme.Str));
+                    goto enumDeclOrDef;
                 default:
-                    this.Emit(start, idx - 1, TokenType.LitString);
-                    this.Emit(idx - 1, idx + 1, TokenType.Error);
-                    start = idx + 1;
-                    goto litStringCont;
+                    goto backToSafety;
                 }
 
-            litStringEscapedXStart:
-                if (++idx >= this.text.Length)
-                    return;
-                cchar = this.text.Chars[idx];
-                if (Char.IsDigit(cchar) || (cchar >= 'A' && cchar <= 'F') || (cchar >= 'a' && cchar <= 'f'))
-                    goto litStringEscapedXCont;
-                this.Emit(start, idx - 1, TokenType.LitString);
-                this.Emit(idx - 1, idx + 1, TokenType.Error);
-                start = idx + 1;
-                goto litStringCont;
-
-            litStringEscapedXCont:
-                if (++idx >= this.text.Length)
-                    return;
-                cchar = this.text.Chars[idx];
-                if (Char.IsDigit(cchar) || (cchar >= 'A' && cchar <= 'F') || (cchar >= 'a' && cchar <= 'f'))
-                    goto litStringEscapedXCont;
-                --idx;
-                goto litStringCont;
-
-            litStringEscapedO:
-                goto litStringCont;
-            #endregion
-
-            #region Number parsing
-            litNumberStart:
-                start = idx + 1;
-                this.Emit(idx, start, TokenType.LitNumber);
-                goto litDecNumberCont;
-
-            litDecNumberCont:
-                if (++idx >= this.text.Length)
-                    return;
-                cchar = this.text.Chars[idx];
-                if (!Char.IsDigit(cchar))
+            enumDeclOrDef:
+                lexeme = this.Lex(ref idx);
+                switch (lexeme.Type)
                 {
-                    this.Emit(start, idx, TokenType.LitNumber);
-                    --idx;
-                    goto noneNoPP;
+                case Ltype.Lacc:
+                    goto enumDeclareMembers;
+                default:
+                    goto backToSafety;
                 }
-                goto litDecNumberCont;
-            #endregion
 
-            #region Identifier parsing
-            identifierStart:
-                start = idx;
-                goto identifierCont;
+            enumDeclareMembers:
+                lexeme = this.Lex(ref idx);
+                switch (lexeme.Type)
+                {
+                case Ltype.Identifier:
+                    goto enumDeclareMembers;
+                default:
+                    goto backToSafety;
+                }
 
-            identifierCont:
-                if (++idx >= this.text.Length)
-                    goto identifierEnd;
-                cchar = this.text.Chars[idx];
-                if (Char.IsLetterOrDigit(cchar) || cchar == '_' || cchar == '$')
-                    goto identifierCont;
-                --idx;
-                goto identifierEnd;
-
-            identifierEnd:
-                ++idx;
-                id = this.text.Chars.Substring(start, idx - start);
-                if (cstate != Pstate.None)
-                    goto jumptable;
-                cchar = this.text.Chars[idx];
-                if (this.macros.Contains(id))
-                    this.Emit(start, idx, TokenType.Macro);
-                else if (KEYWORDS.Contains(id))
-                    this.Emit(start, idx, TokenType.Keyword);
-                else
-                    this.Emit(start, idx, TokenType.Error);
-                --idx;
-                if (cchar == '\r')
+            backToSafety:
+                switch (this.Lex(ref idx).Type)
+                {
+                case Ltype.Semic:
                     goto none;
-                goto noneNoPP;
-                #endregion
+                case Ltype.Eof:
+                    return;
+                default:
+                    goto backToSafety;
+                }
+
             }
 
             async private void Loop()
@@ -437,6 +249,10 @@ namespace Leadis_Journey
                 {
                     while (!this.inqueue.TryDequeue(out block))
                         await Task.Delay(WAIT_FOR_BLOCK);
+                    var idsHgOld = new LinkedList<Token>(this.keywordsHg);
+                    var keywordsHgOld = new LinkedList<Token>(this.keywordsHg);
+                    this.idsHg.Clear();
+                    this.keywordsHg.Clear();
                     switch (block.Action)
                     {
                     case TextBlock.Tag.Insert:
@@ -445,15 +261,19 @@ namespace Leadis_Journey
                         break;
                     case TextBlock.Tag.Remove:
                         text.Remove(block.Where, block.Text.Length);
-                        this.Parse();
+                        this.Parse(block.Where);
                         break;
                     case TextBlock.Tag.Set:
-                        this.macros.Clear();
-                        text.Remove(0, text.Length);
-                        text.Insert(0, block.Text);
+                        text.Set(block.Text);
                         this.Parse();
                         break;
                     }
+                    foreach (var toRemove in keywordsHgOld.Except(this.keywordsHg))
+                        this.outqueue.Enqueue(new Token(toRemove.Begin, toRemove.End, TokenType.None));
+                    foreach (var toAdd in this.keywordsHg.Except(keywordsHgOld))
+                        this.outqueue.Enqueue(toAdd);
+                    foreach (var toAdd in this.idsHg.Except(idsHgOld))
+                        this.outqueue.Enqueue(toAdd);
                 }
             }
 
